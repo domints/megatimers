@@ -12,6 +12,13 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
+#if (defined(__AVR_ATmega640__) || defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) || defined(__AVR_ATmega1281__) || defined(__AVR_ATmega2561__))
+  #define __Arduino_Mega__
+#else
+  #define __Arduino_Uno__
+#endif
+
+
 #define RESOLUTION 65536    //all used Timers are 16 bit
 
 
@@ -39,6 +46,7 @@ class TimerOne
 
 extern TimerOne Timer1;
 
+#ifdef __Arduino_Mega_
 class TimerThree
 {
   public:
@@ -112,3 +120,4 @@ class TimerFive
 };
 
 extern TimerFive Timer5;
+#endif
