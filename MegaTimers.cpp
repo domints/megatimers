@@ -1,6 +1,10 @@
 /*
- *  Interrupt and PWM utilities for 16 bit Timers on ATmega2580
- *  Oct 2013 by Dominik Szymański to support Timer 1, 3, 4 & 5 of Arduino Mega
+ *  Interrupt and PWM utilities for 16 bit Timer3 on ATmega168/328
+ *  Original code by Jesse Tane for http://labs.ideo.com August 2008
+ *  Modified March 2009 by Jérôme Despatis and Jesse Tane for ATmega328 support
+ *  Modified June 2009 by Michael Polli and Jesse Tane to fix a bug in setPeriod() which caused the timer to stop
+ *  Modified Oct 2009 by Dan Clemens to work with timer3 of the ATMega1280 or Arduino Mega
+ *  Modified Oct 2013 by Dominik Szymański to support Timer 1, 3, 4 & 5 of Arduino Mega
  *
  *  This is free software. You can redistribute it and/or modify it under
  *  the terms of Creative Commons Attribution 3.0 United States License. 
@@ -12,15 +16,17 @@
 #include "MegaTimers.h"
 
 TimerOne Timer1;              // preinstatiate
+#ifdef __Arduino_Mega__
 TimerThree Timer3;              // preinstatiate
 TimerFour Timer4;              // preinstatiate
 TimerFive Timer5;              // preinstatiate
-
+#endif
 //ISR's
 ISR(TIMER1_OVF_vect)          // interrupt service routine that wraps a user defined function supplied by attachInterrupt
 {
   Timer1.isrCallback();
 }
+#ifdef __Arduino_Mega__
 ISR(TIMER3_OVF_vect)          // interrupt service routine that wraps a user defined function supplied by attachInterrupt
 {
   Timer3.isrCallback();
@@ -33,6 +39,7 @@ ISR(TIMER5_OVF_vect)          // interrupt service routine that wraps a user def
 {
   Timer5.isrCallback();
 }
+#endif
 //END of ISR
 
 //::initialize
@@ -42,6 +49,7 @@ void TimerOne::initialize(long microseconds)
   TCCR1B = _BV(WGM13);        // set mode as phase and frequency correct pwm, stop the timer
   setPeriod(microseconds);
 }
+#ifdef __Arduino_Mega__
 void TimerThree::initialize(long microseconds)
 {
   TCCR3A = 0;                 // clear control register A 
@@ -60,6 +68,7 @@ void TimerFive::initialize(long microseconds)
   TCCR5B = _BV(WGM53);        // set mode as phase and frequency correct pwm, stop the timer
   setPeriod(microseconds);
 }
+#endif
 //END of ::initialize
 
 //::setPeriod
@@ -76,6 +85,7 @@ void TimerOne::setPeriod(long microseconds)
   TCCR1B &= ~(_BV(CS10) | _BV(CS11) | _BV(CS12));
   TCCR1B |= clockSelectBits;                                                     // reset clock select register
 }
+#ifdef __Arduino_Mega__
 void TimerThree::setPeriod(long microseconds)
 {
   long cycles = (F_CPU * microseconds) / 2000000;                                // the counter runs backwards after TOP, interrupt is at BOTTOM so divide microseconds by 2
@@ -115,9 +125,11 @@ void TimerFive::setPeriod(long microseconds)
   TCCR5B &= ~(_BV(CS50) | _BV(CS51) | _BV(CS52));
   TCCR5B |= clockSelectBits;                                                     // reset clock select register
 }
+#endif
 //END of ::setPeriod
 
 //::setPwmDuty
+#ifdef __Arduino_Mega__
 void TimerOne::setPwmDuty(char pin, int duty)
 {
   unsigned long dutyCycle = pwmPeriod;
@@ -154,9 +166,20 @@ void TimerFive::setPwmDuty(char pin, int duty)
   if(pin == 39) OCR5B = dutyCycle;
   if(pin == 38) OCR5A = dutyCycle;
 }
+#else
+void TimerOne::setPwmDuty(char pin, int duty)
+{
+  unsigned long dutyCycle = pwmPeriod;
+  dutyCycle *= duty;
+  dutyCycle >>= 10;
+  if(pin == 9) OCR1A = dutyCycle;
+  if(pin == 10) OCR1B = dutyCycle;
+}
+#endif
 //END of ::setPwmDuty
 
 //::pwm
+#ifdef __Arduino_Mega__
 void TimerOne::pwm(char pin, int duty, long microseconds)  // expects duty cycle to be 10 bit (1024)
 {
   if(microseconds > 0) setPeriod(microseconds);
@@ -164,7 +187,7 @@ void TimerOne::pwm(char pin, int duty, long microseconds)  // expects duty cycle
 	// activates the output pin
   if(pin == 11) { DDRB |= _BV(PORTB5); TCCR1A |= _BV(COM1A1); }
   if(pin == 12) { DDRB |= _BV(PORTB6); TCCR1A |= _BV(COM1B1); }
-  if(pin == 12) { DDRB |= _BV(PORTB7); TCCR1A |= _BV(COM1C1); }
+  if(pin == 13) { DDRB |= _BV(PORTB7); TCCR1A |= _BV(COM1C1); }
   setPwmDuty(pin, duty);
   start();
 }
@@ -201,9 +224,22 @@ void TimerFive::pwm(char pin, int duty, long microseconds)  // expects duty cycl
   setPwmDuty(pin, duty);
   start();
 }
+#else
+void TimerOne::pwm(char pin, int duty, long microseconds)  // expects duty cycle to be 10 bit (1024)
+{
+  if(microseconds > 0) setPeriod(microseconds);
+  // sets data direction register for pwm output pin
+	// activates the output pin
+  if(pin == 9) { DDRB |= _BV(PORTB1); TCCR1A |= _BV(COM1A1); }
+  if(pin == 10) { DDRB |= _BV(PORTB2); TCCR1A |= _BV(COM1B1); }
+  setPwmDuty(pin, duty);
+  start();
+}
+#endif
 //END of ::pwm
 
 //::disablePWM
+#ifdef __Arduino_Mega__
 void TimerOne::disablePwm(char pin)
 {
   if(pin == 11) TCCR1A &= ~_BV(COM1A1);   // clear the bit that enables pwm on PB5
@@ -228,6 +264,13 @@ void TimerFive::disablePwm(char pin)
   if(pin == 39) TCCR5A &= ~_BV(COM5B1);   // clear the bit that enables pwm on PL4
   if(pin == 40) TCCR5A &= ~_BV(COM5C1);   // clear the bit that enables pwm on PL5
 }
+#else
+void TimerOne::disablePwm(char pin)
+{
+  if(pin == 9) TCCR1A &= ~_BV(COM1A1);   // clear the bit that enables pwm on PB1
+  if(pin == 10) TCCR1A &= ~_BV(COM1B1);   // clear the bit that enables pwm on PB2
+}
+#endif
 //END of ::disablePwm
 
 //::attachInterrupt
@@ -239,6 +282,7 @@ void TimerOne::attachInterrupt(void (*isr)(), long microseconds)
   sei();                                                   // ensures that interrupts are globally enabled
   start();
 }
+#ifdef __Arduino_Mega__
 void TimerThree::attachInterrupt(void (*isr)(), long microseconds)
 {
   if(microseconds > 0) setPeriod(microseconds);
@@ -263,6 +307,7 @@ void TimerFive::attachInterrupt(void (*isr)(), long microseconds)
   sei();                                                   // ensures that interrupts are globally enabled
   start();
 }
+#endif
 //END of ::attachInterrupt
 
 //::detachInterrupt
@@ -270,6 +315,7 @@ void TimerOne::detachInterrupt()
 {
   TIMSK1 &= ~_BV(TOIE1);                                   // clears the timer overflow interrupt enable bit 
 }
+#ifdef __Arduino_Mega__
 void TimerThree::detachInterrupt()
 {
   TIMSK3 &= ~_BV(TOIE3);                                   // clears the timer overflow interrupt enable bit 
@@ -282,6 +328,7 @@ void TimerFive::detachInterrupt()
 {
   TIMSK5 &= ~_BV(TOIE5);                                   // clears the timer overflow interrupt enable bit 
 }
+#endif
 //END of ::detachInterrupt
 
 //::start
@@ -289,6 +336,7 @@ void TimerOne::start()
 {
   TCCR1B |= clockSelectBits;
 }
+#ifdef __Arduino_Mega__
 void TimerThree::start()
 {
   TCCR3B |= clockSelectBits;
@@ -301,6 +349,7 @@ void TimerFive::start()
 {
   TCCR5B |= clockSelectBits;
 }
+#endif
 //END of ::start
 
 //::stop
@@ -308,6 +357,7 @@ void TimerOne::stop()
 {
   TCCR1B &= ~(_BV(CS10) | _BV(CS11) | _BV(CS12));          // clears all clock selects bits
 }
+#ifdef __Arduino_Mega__
 void TimerThree::stop()
 {
   TCCR3B &= ~(_BV(CS30) | _BV(CS31) | _BV(CS32));          // clears all clock selects bits
@@ -320,6 +370,7 @@ void TimerFive::stop()
 {
   TCCR5B &= ~(_BV(CS50) | _BV(CS51) | _BV(CS52));          // clears all clock selects bits
 }
+#endif
 //END of ::stop
 
 //::restart
@@ -327,6 +378,7 @@ void TimerOne::restart()
 {
   TCNT1 = 0;
 }
+#ifdef __Arduino_Mega__
 void TimerThree::restart()
 {
   TCNT3 = 0;
@@ -339,4 +391,5 @@ void TimerFive::restart()
 {
   TCNT5 = 0;
 }
+#endif
 //END of ::restart
