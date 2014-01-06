@@ -46,7 +46,7 @@ class TimerOne
 
 extern TimerOne Timer1;
 
-#ifdef __Arduino_Mega_
+#ifdef __Arduino_Mega__
 class TimerThree
 {
   public:
