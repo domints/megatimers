@@ -162,9 +162,9 @@ void TimerFive::setPwmDuty(char pin, int duty)
   unsigned long dutyCycle = pwmPeriod;
   dutyCycle *= duty;
   dutyCycle >>= 10;
-  if(pin == 40) OCR5C = dutyCycle;
-  if(pin == 39) OCR5B = dutyCycle;
-  if(pin == 38) OCR5A = dutyCycle;
+  if(pin == 44) OCR5C = dutyCycle;
+  if(pin == 45) OCR5B = dutyCycle;
+  if(pin == 46) OCR5A = dutyCycle;
 }
 #else
 void TimerOne::setPwmDuty(char pin, int duty)
@@ -218,9 +218,9 @@ void TimerFive::pwm(char pin, int duty, long microseconds)  // expects duty cycl
   if(microseconds > 0) setPeriod(microseconds);
   // sets data direction register for pwm output pin
 	// activates the output pin
-  if(pin == 38) { DDRL |= _BV(PORTL3); TCCR4A |= _BV(COM5A1); }
-  if(pin == 39) { DDRL |= _BV(PORTL4); TCCR4A |= _BV(COM5B1); }
-  if(pin == 40) { DDRL |= _BV(PORTL5); TCCR4A |= _BV(COM5C1); }
+  if(pin == 46) { DDRL |= _BV(PORTL3); TCCR4A |= _BV(COM5A1); }
+  if(pin == 45) { DDRL |= _BV(PORTL4); TCCR4A |= _BV(COM5B1); }
+  if(pin == 44) { DDRL |= _BV(PORTL5); TCCR4A |= _BV(COM5C1); }
   setPwmDuty(pin, duty);
   start();
 }
@@ -260,9 +260,9 @@ void TimerFour::disablePwm(char pin)
 }
 void TimerFive::disablePwm(char pin)
 {
-  if(pin == 38) TCCR5A &= ~_BV(COM5A1);   // clear the bit that enables pwm on PL3
-  if(pin == 39) TCCR5A &= ~_BV(COM5B1);   // clear the bit that enables pwm on PL4
-  if(pin == 40) TCCR5A &= ~_BV(COM5C1);   // clear the bit that enables pwm on PL5
+  if(pin == 46) TCCR5A &= ~_BV(COM5A1);   // clear the bit that enables pwm on PL3
+  if(pin == 45) TCCR5A &= ~_BV(COM5B1);   // clear the bit that enables pwm on PL4
+  if(pin == 44) TCCR5A &= ~_BV(COM5C1);   // clear the bit that enables pwm on PL5
 }
 #else
 void TimerOne::disablePwm(char pin)
