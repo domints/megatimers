@@ -1,0 +1,1 @@
+Simple library which helps using 16-bit timers in Arduino Mega
